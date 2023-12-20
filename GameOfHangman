@@ -1,0 +1,112 @@
+from abc import abstractmethod, ABC
+import random
+
+
+class Game(ABC):
+    def __init__(self, player_name, rounds_played=0, wins=0, losses=0):
+        self.player_name = str(player_name)
+        self.rounds_played = int(rounds_played)
+        self.wins = int(wins)
+        self.losses = int(losses)
+
+    @abstractmethod
+    def summarize_game(self):
+        pass
+
+    @abstractmethod
+    def start_round(self):
+        pass
+
+    @abstractmethod
+    def end_round(self):
+        pass
+
+
+class Hangman(Game):
+    def __init__(self, player_name, max_guesses=5, guessed_letters=None, _secret_word=None, _secret_word_working=None,
+                 _library=None, guesses_remaining=None, solved=None):
+        super().__init__(player_name)
+        self.guessed_letters = guessed_letters or []
+        self._secret_word = str(_secret_word) if _secret_word else None
+        self._secret_word_working = _secret_word_working
+        self._library = _library or ["minecraft", "chess", "hangman"]
+        self.max_guesses = int(max_guesses)
+        self.guesses_remaining = int(guesses_remaining) if guesses_remaining is not None else None
+        self.solved = bool(solved) if solved is not None else None
+
+    def __repr__(self):
+        return f"Hangman('{self.player_name}', {self.max_guesses}, {self.guessed_letters}, " \
+               f"{self._secret_word}, {self._secret_word_working}, {self._library}, " \
+               f"{self.guesses_remaining}, {self.solved})"
+
+    def summarize_game(self):
+        return f"Hangman Game Summary:\nPlayer: {self.player_name}\nRounds Played: {self.rounds_played}\n" \
+               f"Wins: {self.wins}\nLosses: {self.losses}"
+
+    def start_round(self):
+        self._secret_word = random.choice(self._library).lower()
+        self._secret_word_working = ['_' if letter.isalpha() else letter for letter in self._secret_word]
+        self.guessed_letters = []
+        self.guesses_remaining = self.max_guesses
+        self.solved = False
+        self.rounds_played += 1
+
+    def end_round(self):
+        if self.solved:
+            self.wins += 1
+        else:
+            self.losses += 1
+
+    def make_guess(self, letter):
+        letter = letter.lower()
+        if letter.isalpha() and letter not in self.guessed_letters:
+            self.guessed_letters.append(letter)
+            if all(char.isalpha() or char.isspace() for char in self._secret_word_working):
+                self.solved = True
+            elif letter in self._secret_word:
+                for i in range(len(self._secret_word)):
+                    if self._secret_word[i] == letter:
+                        self._secret_word_working[i] = letter
+            else:
+                self.guesses_remaining -= 1
+        else:
+            # Invalid or repeated guess
+            return False
+
+        return True
+
+    def display_current_state(self):
+        return f"Secret Word: {' '.join(self._secret_word_working)}\n" \
+               f"Guessed Letters: {', '.join(self.guessed_letters)}\n" \
+               f"Guesses Remaining: {self.guesses_remaining}\n"
+
+    def is_it_solved(self):
+        return self.solved
+
+    @property
+    def secret_word(self):
+        return self._secret_word
+
+
+# Running the Program:
+if __name__ == "__main__":
+    hangman_game = Hangman("Player1")
+
+    while True:
+        hangman_game.start_round()
+        while not hangman_game.is_it_solved() and hangman_game.guesses_remaining > 0:
+            print(hangman_game.display_current_state())
+            guess = input("Make a guess: ")
+            hangman_game.make_guess(guess)
+
+        if hangman_game.is_it_solved():
+            print("Congratulations! You guessed the word!")
+        else:
+            print(f"Sorry! The word was: {hangman_game.secret_word}")
+
+        hangman_game.end_round()
+        print(hangman_game.summarize_game())
+
+        play_again = input("Do you want to play again? (yes/no): ")
+        if play_again.lower() != 'yes':
+            break
